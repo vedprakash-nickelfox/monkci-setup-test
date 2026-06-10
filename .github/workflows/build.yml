@@ -1,4 +1,4 @@
-name: Rateslookup Build and Deploy
+name: Hans Infotech Build and Deploy
 
 on:
   push:
