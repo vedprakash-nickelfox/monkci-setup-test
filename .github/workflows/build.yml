@@ -1,0 +1,115 @@
+name: Rateslookup Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Install, Test & Build
+    runs-on: monkci-ubuntu-24.04-4
+    timeout-minutes: 15
+
+    steps:
+      - name: Record build start time
+        id: start_time
+        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Report bundle size
+        run: |
+          echo "======================================"
+          echo "  Bundle Size Report"
+          echo "======================================"
+          if [ -d "./out" ]; then
+            TOTAL=$(du -sh ./out | cut -f1)
+            echo "  Total bundle size: $TOTAL"
+            echo ""
+            echo "  Top 10 largest files:"
+            find ./out -type f | xargs du -sh | sort -rh | head -10 | \
+              awk '{printf "  %-8s %s\n", $1, $2}'
+            echo ""
+            echo "  File type breakdown:"
+            for ext in js css html json png jpg svg; do
+              SIZE=$(find ./out -name "*.${ext}" -type f -exec du -cb {} + 2>/dev/null | tail -1 | cut -f1)
+              if [ "$SIZE" -gt 0 ] 2>/dev/null; then
+                HUMAN=$(numfmt --to=iec-i --suffix=B $SIZE)
+                printf "  %-6s %s\n" ".${ext}:" "$HUMAN"
+              fi
+            done
+          else
+            echo "  ERROR: ./out directory not found!"
+            exit 1
+          fi
+          echo "======================================"
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+          retention-days: 1
+
+      - name: Report build execution time
+        if: always()
+        run: |
+          END=$(date +%s)
+          START=${{ steps.start_time.outputs.start }}
+          DURATION=$((END - START))
+          MINUTES=$((DURATION / 60))
+          SECONDS=$((DURATION % 60))
+          echo "======================================"
+          echo "  Build Total Execution Time"
+          echo "======================================"
+          echo "  Start  : $(date -d @$START '+%Y-%m-%d %H:%M:%S')"
+          echo "  End    : $(date -d @$END '+%Y-%m-%d %H:%M:%S')"
+          echo "  Duration: ${MINUTES}m ${SECONDS}s (${DURATION}s total)"
+          echo "======================================"
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build-and-test
+    runs-on: monkci-ubuntu-24.04-4
+    timeout-minutes: 10
+
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
