@@ -10,7 +10,7 @@ const navLinks = [
   { label: "Services", href: "#services" },
   { label: "Why Us", href: "#why-us" },
   { label: "Process", href: "#process" },
-  { label: "Contact", href: "#contact" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Navbar() {
@@ -68,7 +68,7 @@ export default function Navbar() {
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
             <motion.a
-              href="#contact"
+              href="/contact"
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className="relative px-5 py-2.5 text-sm font-semibold text-white rounded-xl overflow-hidden group"
@@ -119,7 +119,7 @@ export default function Navbar() {
                 </motion.div>
               ))}
               <motion.a
-                href="#contact"
+                href="/contact"
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: navLinks.length * 0.07 }}
