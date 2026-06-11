@@ -1,4 +1,4 @@
-name: Hans Infotech Build and Deploy
+name: MonkCI Renner test Build and Deploy
 
 on:
   push:
